@@ -62,6 +62,16 @@ public class SessionImpl implements Session {
                 .orElseThrow(() -> new RuntimeException("Entity must have a default constructor with no parameters"));
     }
 
+    private <T> T retrieveEntityFromDb(Class<T> type, Object id) {
+        String selectQuery = buildSelectQuery(type, id);
+        try (PreparedStatement statement = connection.prepareStatement(selectQuery, Statement.RETURN_GENERATED_KEYS)) {
+            return retrieveEntityFromDb(type, statement);
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Error while retrieving the entity of type %s with id %s from DB".formatted(type.getName(), id), e);
+        }
+    }
+
     private String buildSelectQuery(Class<?> type, Object id) {
         String query = "SELECT * FROM %s WHERE %s = %s";
         String tableName = resolveTableName(type);
@@ -95,16 +105,6 @@ public class SessionImpl implements Session {
             }
         }
         return field.getName();
-    }
-
-    private <T> T retrieveEntityFromDb(Class<T> type, Object id) {
-        String selectQuery = buildSelectQuery(type, id);
-        try (PreparedStatement statement = connection.prepareStatement(selectQuery, Statement.RETURN_GENERATED_KEYS)) {
-            return retrieveEntityFromDb(type, statement);
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    "Error while retrieving the entity of type %s with id %s from DB".formatted(type.getName(), id), e);
-        }
     }
 
     private static <T> T retrieveEntityFromDb(Class<T> type, PreparedStatement statement) throws Exception {
